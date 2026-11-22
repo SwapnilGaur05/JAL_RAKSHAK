@@ -1,0 +1,69 @@
+node_modules/
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+*.db
+
+# Frontend build
+dist/
+frontend/dist/
+.vite/
+
+# Python environments
+venv/
+backend/venv/
+*.pyc
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Secrets and environment settings
+.env.*
+!.env.example
+
+# Local backups
+backups/
+*.before_*
+*.before-*
+
+# Mac and editor files
+.DS_Store
+
+# Frontend build
+dist/
+frontend/dist/
+.vite/
+
+# Python environments
+venv/
+backend/venv/
+*.pyc
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Secrets and environment settings
+.env.*
+!.env.example
+
+# Local backups
+backups/
+*.before_*
+*.before-*
+
+# Mac and editor files
+.DS_Store
+
+# Local VS Code settings
+.vscode/
+
+# Frontend backup files
+*.backup
+
+# Local model backup
+*.original.joblib
