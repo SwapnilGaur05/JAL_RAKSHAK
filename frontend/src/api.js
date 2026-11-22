@@ -2,7 +2,17 @@
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const OFFICER_KEY = import.meta.env.VITE_DEMO_OFFICER_KEY || 'local-demo-officer-key';
 
+const PUBLIC_DEMO = import.meta.env.VITE_PUBLIC_DEMO_MODE === 'true';
+
 export async function api(path, options = {}, officer = false) {
+  const method = (options.method || 'GET').toUpperCase();
+
+  if (PUBLIC_DEMO && method !== 'GET') {
+    throw new Error(
+      'This is a read-only demonstration. Emergency requests and submissions are disabled.'
+    );
+  }
+
   const response = await fetch(`${BASE}/api${path}`, {
     ...options,
     headers: {

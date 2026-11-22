@@ -276,3 +276,31 @@ function Panel({ title, children }) { return <section className="panel"><h3>{tit
 function Stat({ label, value }) { return <div className="stat"><small>{label}</small><h2>{value}</h2></div>; }
 function Record({ title, detail, tag, action }) { return <div className="record"><div className="between"><strong>{title}</strong>{tag && <span className="pill">{tag}</span>}</div><p>{detail}</p>{action}</div>; }
 createRoot(document.getElementById('root')).render(<App />);
+
+
+// PUBLIC_DEMO_UI_GUARD
+const PUBLIC_DEMO_UI = import.meta.env.VITE_PUBLIC_DEMO_MODE === 'true';
+
+if (PUBLIC_DEMO_UI && typeof document !== 'undefined') {
+  document.addEventListener('click', (event) => {
+    const button = event.target instanceof Element
+      ? event.target.closest('button')
+      : null;
+
+    if (!button) return;
+
+    const label = (button.textContent || '').toLowerCase();
+
+    if (label.includes('use my location')) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      alert('Location collection is disabled in this public demo.');
+    }
+  }, true);
+
+  document.addEventListener('submit', (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    alert('Public demo only. Submissions are disabled.');
+  }, true);
+}

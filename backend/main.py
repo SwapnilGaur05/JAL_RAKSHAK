@@ -21,7 +21,18 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 # Database: SQLite locally; change DATABASE_URL for PostgreSQL later.
 DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./civ02.db')
-engine = create_engine(DATABASE_URL, connect_args={'check_same_thread': False} if DATABASE_URL.startswith('sqlite') else {}, pool_pre_ping=True)
+
+# Render PostgreSQL URLs use the psycopg v3 driver.
+if DATABASE_URL.startswith('postgres://'):
+    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql+psycopg://', 1)
+elif DATABASE_URL.startswith('postgresql://'):
+    DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg://', 1)
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={'check_same_thread': False} if DATABASE_URL.startswith('sqlite') else {},
+    pool_pre_ping=True,
+)
 SessionLocal = sessionmaker(bind=engine)
 OFFICER_KEY = os.getenv('OFFICER_API_KEY', 'local-demo-officer-key')
 
@@ -147,16 +158,55 @@ app.add_middleware(
         "http://localhost:5175",
         "http://localhost:5176",
         "http://localhost:5177",
+        *[
+            origin.strip().rstrip("/")
+            for origin in os.getenv("FRONTEND_ORIGIN", "").split(",")
+            if origin.strip()
+        ],
     ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def protect_public_demo(request, call_next):
+    from fastapi.responses import JSONResponse
+
+    if os.getenv("PUBLIC_DEMO_MODE", "false").lower() == "true":
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.url.path.startswith("/api/"):
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Submissions and changes are disabled in the public demonstration."},
+            )
+
+        if (
+            request.method == "GET"
+            and request.url.path.startswith("/api/rescue-requests/")
+            and request.url.path.endswith("/matches")
+        ):
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Rescue matching is disabled in the public demonstration."},
+            )
+
+        if request.method == "GET" and request.url.path in {
+            "/api/incidents",
+            "/api/rescue-requests",
+            "/api/volunteers",
+            "/api/rumours",
+        }:
+            return JSONResponse(content=[])
+
+    return await call_next(request)
+
 
 def db_session():
     with SessionLocal() as db:
         yield db
 
 def officer(x_officer_key: Optional[str]=Header(None)):
+    if os.getenv('PUBLIC_DEMO_MODE', 'false').lower() == 'true':
+        raise HTTPException(403, 'Officer actions are disabled in the public demo')
     if not x_officer_key or x_officer_key != OFFICER_KEY:
         raise HTTPException(403, 'Officer authorization required')
 
@@ -386,6 +436,8 @@ def create_sos(data: SOSIn, db: Session=Depends(db_session)):
 
 @app.get('/api/sos')
 def list_sos(db: Session=Depends(db_session)):
+    if os.getenv('PUBLIC_DEMO_MODE', 'false').lower() == 'true':
+        return []
     items = []
     for item in db.scalars(select(SOS).order_by(SOS.id.desc())):
         rescue = db.get(Rescue, item.rescue_id)
